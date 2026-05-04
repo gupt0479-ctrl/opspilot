@@ -1,12 +1,11 @@
-import { NextRequest, NextResponse } from "next/server"
-import { generateInvoice } from "@/lib/services/invoice.service"
+import { NextResponse } from "next/server"
 
-export async function POST(req: NextRequest) {
-  const body = await req.json()
-  if (!body.reservation_id || !body.line_items?.length) {
-    return NextResponse.json({ error: "reservation_id and line_items required." }, { status: 400 })
-  }
-  const result = await generateInvoice(body)
-  if (result.error) return NextResponse.json({ error: result.error }, { status: 500 })
-  return NextResponse.json({ invoice: result.data }, { status: 201 })
+export async function POST() {
+  return NextResponse.json(
+    {
+      error: "This legacy invoice endpoint has been retired.",
+      replacement: "Complete an appointment, then use /api/invoices/{id}/send.",
+    },
+    { status: 410 }
+  )
 }

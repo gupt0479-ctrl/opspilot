@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { createServerSupabaseClient, DEMO_ORG_ID } from "@/lib/db/supabase-server"
+import { isSupabaseConfigured } from "@/lib/env"
 
 export const dynamic = "force-dynamic"
 
@@ -45,6 +46,16 @@ function statusStyle(status: string) {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function WorkflowPage() {
+  if (!isSupabaseConfigured()) {
+    return (
+      <div className="m-8 rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm">
+        <p className="font-semibold text-amber-800">
+          Supabase not configured — connect a project to see workflow data.
+        </p>
+      </div>
+    )
+  }
+
   const client = createServerSupabaseClient()
   const { data } = await client
     .from("ai_actions")
@@ -54,7 +65,7 @@ export default async function WorkflowPage() {
     .limit(20)
   const timeline = data ?? []
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-7">
       <div>
         <h1 className="text-xl font-semibold text-foreground">Workflow</h1>
         <p className="text-xs text-muted-foreground">

@@ -138,7 +138,7 @@ export default async function DashboardPage() {
         : "Revenue and expenses are flat this week"
 
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-7">
       <div>
         <h1 className="text-xl font-semibold text-foreground">Good morning, Sarah</h1>
         <p className="text-xs text-muted-foreground">{today()} · Ember Table</p>

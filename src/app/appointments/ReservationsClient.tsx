@@ -328,7 +328,7 @@ export function ReservationsClient({
     } finally {
       setActionLoading(false)
     }
-  }, [bookForm])
+  }, [bookForm, router])
 
   // ── Line item helpers ────────────────────────────────────────────────────
 
@@ -342,7 +342,7 @@ export function ReservationsClient({
   // ── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="space-y-7">
 
       {/* ── AI Input Box ─────────────────────────────────────────────────── */}
       <div className="rounded-xl border border-border bg-card p-4 space-y-3">

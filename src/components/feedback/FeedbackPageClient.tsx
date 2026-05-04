@@ -20,8 +20,6 @@ import {
   X,
   RefreshCw,
   ArrowUpDown,
-  Bell,
-  MessageSquare,
   Mail,
 } from "lucide-react"
 import type { FeedbackCardRow, FeedbackTableRow, PendingFollowUpRow } from "@/lib/queries/feedback"
@@ -50,126 +48,7 @@ type ModalState = {
 
 type SortKey = "guest" | "score" | "source" | "sentiment" | "date"
 type SortDir = "asc" | "desc"
-type TabId = "flagged" | "appointments" | "pending" | "all"
-
-// ── Mock data (TODO: replace with Supabase query) ──────────────────────────────
-
-const CELEBRITY_CARDS: ExtendedFeedbackCard[] = [
-  {
-    id: "celeb-justin",
-    guest: "Justin Bieber",
-    score: 1,
-    source: "internal",
-    comment:
-      "My appetite went away when I saw my ex Selena Gomez walk in. Couldn't even finish the Wagyu. Not the restaurant's fault but still 2 stars.",
-    sentiment: "negative",
-    urgency: 3,
-    safetyFlag: false,
-    replyDraft:
-      "Justin, we're so sorry the evening didn't go as planned. We'd love to make it up to you — your next visit is on us.",
-    followUpStatus: "none",
-    dateLabel: "Apr 14, 2026",
-    approveLabel: "Approve Reply",
-    draftTitle: "AI-drafted reply",
-    canApproveReply: false,
-    pendingActionId: null,
-    topics: ["food_quality", "ambiance"],
-    churnRisk: "low",
-    recoveryAction: { type: "comp_offer", priority: "normal", channel: "email" },
-    internalNote:
-      "Guest distracted by personal situation. Food was not the issue. Low recovery risk.",
-    toneVariants: {
-      professional:
-        "Dear Mr. Bieber, we regret that your experience was affected by circumstances outside our control. We would welcome the opportunity to host you again.",
-      warm:
-        "Justin, we completely understand — some evenings just don't go as planned. We'd love to make your next visit a truly special one, just for you.",
-      firm:
-        "We appreciate your feedback. The kitchen performed to standard that evening. We hope to see you again under better circumstances.",
-      brief: "Sorry it wasn't perfect, Justin. Next one's on us.",
-    },
-  },
-  {
-    id: "celeb-gordon",
-    guest: "Gordon Ramsay",
-    score: 3,
-    source: "google",
-    comment:
-      "The wagyu was cooked correctly — medium rare, good crust. But the sauce was BLAND. Absolute disaster. The service recovered well though. 3 stars, could be 4 if the kitchen sorts itself out.",
-    sentiment: "neutral",
-    urgency: 3,
-    safetyFlag: false,
-    replyDraft:
-      "Chef Ramsay, we genuinely appreciate the honest feedback. We are reviewing the sauce preparation immediately. We hope to earn that 4th star on your next visit.",
-    followUpStatus: "none",
-    dateLabel: "Apr 14, 2026",
-    approveLabel: "Approve Reply",
-    draftTitle: "AI-drafted public reply",
-    canApproveReply: true,
-    pendingActionId: null,
-    topics: ["food_quality", "service_speed"],
-    churnRisk: "medium",
-    recoveryAction: { type: "personal_call", priority: "high", channel: "phone" },
-    internalNote:
-      "High profile Google review — respond within the hour. Kitchen lead must see this today. This is actually useful critique — act on it.",
-    toneVariants: {
-      professional:
-        "Thank you for your detailed feedback, Chef Ramsay. We take culinary critique seriously and are reviewing our sauce preparations immediately.",
-      warm:
-        "Chef Ramsay, your feedback means the world to us. We are taking your notes straight to the kitchen — we want to earn that 4th star.",
-      firm:
-        "We acknowledge your feedback. Our kitchen team is reviewing the sauce profile. We stand by our wagyu preparation and hope to demonstrate improvement on your next visit.",
-      brief: "Noted on the sauce. Kitchen is on it. Hope to earn star 4 next time, Chef.",
-    },
-  },
-  {
-    id: "celeb-elon",
-    guest: "Elon Musk",
-    score: 2,
-    source: "yelp",
-    comment:
-      "Waited 47 minutes for a table I reserved 3 weeks ago. Time is the most valuable resource and this restaurant has no respect for it. Food was fine. Management needs first principles thinking.",
-    sentiment: "negative",
-    urgency: 4,
-    safetyFlag: false,
-    replyDraft:
-      "Elon, a 47-minute wait for a confirmed reservation is completely unacceptable and we own that fully. We'd love the opportunity to restore your confidence in us.",
-    followUpStatus: "none",
-    dateLabel: "Apr 14, 2026",
-    approveLabel: "Approve Reply",
-    draftTitle: "AI-drafted public reply",
-    canApproveReply: true,
-    pendingActionId: null,
-    topics: ["service_speed", "wait_time", "staff_attitude"],
-    churnRisk: "high",
-    recoveryAction: { type: "comp_offer", priority: "high", channel: "email" },
-    internalNote:
-      "Public Yelp review — needs response within the hour. Reservation system failure, not a staffing issue. Escalate to manager now.",
-    toneVariants: {
-      professional:
-        "We sincerely apologize for the wait time, Mr. Musk. A 47-minute delay for a confirmed reservation is unacceptable and we are reviewing our reservation management process immediately.",
-      warm:
-        "Elon, we are truly sorry. Your time is valuable and we failed to respect that. We want to make this right personally.",
-      firm:
-        "The wait time you experienced was unacceptable. We have identified the reservation system failure and are correcting it. We hope you will give us another chance.",
-      brief: "47 minutes is inexcusable. We own it. Let us make it right.",
-    },
-  },
-]
-
-// TODO: replace with Supabase query
-const MOCK_APPOINTMENTS = [
-  { id: "a1", guest: "Marcus Webb",  date: "Apr 14", time: "7:00 PM", covers: 2, status: "completed", followUp: "thankyou_sent" },
-  { id: "a2", guest: "Priya Nair",   date: "Apr 13", time: "2:00 PM", covers: 4, status: "completed", followUp: "callback_needed" },
-  { id: "a3", guest: "Daniel Kim",   date: "Apr 14", time: "8:00 PM", covers: 4, status: "confirmed", followUp: "none" },
-  { id: "a4", guest: "Rachel Tran",  date: "Apr 12", time: "3:00 PM", covers: 2, status: "completed", followUp: "resolved" },
-  { id: "a5", guest: "James Okafor", date: "Apr 15", time: "6:30 PM", covers: 6, status: "scheduled", followUp: "none" },
-] as const
-
-// TODO: replace with Supabase query
-const AUTO_SENT_ITEMS = [
-  { id: "as1", guest: "Sofia Morales", type: "thank_you",    time: "9:14 AM", preview: "Thank you for dining with us, Sofia — we loved having you!" },
-  { id: "as2", guest: "Marcus Webb",   type: "confirmation", time: "8:02 AM", preview: "Your reservation for tonight at 7 PM is confirmed." },
-]
+type TabId = "flagged" | "pending" | "all"
 
 const TONE_LABELS: Record<ToneKey, string> = {
   professional: "Professional",
@@ -233,22 +112,6 @@ function ChurnBadge({ risk }: { risk: "low" | "medium" | "high" }) {
   if (risk === "high")   return <span className="flex items-center gap-1 text-xs text-red-500"><TrendingUp className="h-3 w-3" />high risk</span>
   if (risk === "medium") return <span className="flex items-center gap-1 text-xs text-amber-500"><Minus className="h-3 w-3" />medium risk</span>
   return <span className="flex items-center gap-1 text-xs text-green-500"><TrendingDown className="h-3 w-3" />low risk</span>
-}
-
-function AppointmentStatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    confirmed:  "bg-blue-500/15 text-blue-600 border border-blue-500/30",
-    seated:     "bg-green-500/15 text-green-600 border border-green-500/30",
-    scheduled:  "bg-muted text-muted-foreground border border-border",
-    completed:  "bg-teal-500/15 text-teal-600 border border-teal-500/30",
-    no_show:    "bg-red-500/15 text-red-500 border border-red-500/30",
-    in_progress:"bg-purple-500/15 text-purple-600 border border-purple-500/30",
-  }
-  return (
-    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${map[status] ?? "bg-muted text-muted-foreground border border-border"}`}>
-      {status.replace("_", " ")}
-    </span>
-  )
 }
 
 // ── Edit Draft Modal ───────────────────────────────────────────────────────────
@@ -578,19 +441,13 @@ export function FeedbackPageClient({
   const [approvedPending, setApprovedPending] = useState<Set<string>>(new Set())
   const [sortKey, setSortKey]         = useState<SortKey>("date")
   const [sortDir, setSortDir]         = useState<SortDir>("desc")
-  const [autoSentOpen, setAutoSentOpen] = useState(false)
 
-  // Merge celebrity cards first, then DB flagged
-  const allFlagged: ExtendedFeedbackCard[] = [
-    ...CELEBRITY_CARDS,
-    ...flagged,
-  ]
+  const allFlagged: ExtendedFeedbackCard[] = flagged
 
   // Derived stats
   const safetyFlagCount  = allFlagged.filter((c) => c.safetyFlag).length
   const urgency5Count    = allFlagged.filter((c) => c.urgency === 5).length
   const callbacksNeeded  = allFeedback.filter((f) => f.followUpStatus === "callback_needed").length
-  const autoSentCount    = AUTO_SENT_ITEMS.length
 
   const avgRatingNum = stats.avgRatingWeek ?? 0
 
@@ -614,11 +471,6 @@ export function FeedbackPageClient({
     {
       label: "Pending approvals", value: String(stats.pendingApprovals),
       icon: <Clock className="h-4 w-4 text-amber-500" />, border: "border-t-amber-500", shadow: "shadow-amber-500/10",
-      isRating: false,
-    },
-    {
-      label: "Auto-sent today", value: String(autoSentCount),
-      icon: <Send className="h-4 w-4 text-green-500" />, border: "border-t-green-500", shadow: "shadow-green-500/10",
       isRating: false,
     },
     {
@@ -672,7 +524,6 @@ export function FeedbackPageClient({
 
   const tabs: { id: TabId; label: string; count: number }[] = [
     { id: "flagged",      label: "Flagged",          count: allFlagged.length },
-    { id: "appointments", label: "Appointments",      count: MOCK_APPOINTMENTS.length },
     { id: "pending",      label: "Pending Approval",  count: pendingActions.length },
     { id: "all",          label: "All Feedback",      count: allFeedback.length },
   ]
@@ -681,9 +532,9 @@ export function FeedbackPageClient({
     <>
       {/* ── Page header ─────────────────────────────────────────────────────── */}
       <div
-        className="space-y-5 p-6 min-h-screen bg-background"
+        className="min-h-screen space-y-7 bg-background"
         style={{
-          backgroundImage: "radial-gradient(circle, hsl(var(--muted-foreground) / 0.06) 1px, transparent 1px)",
+          backgroundImage: "radial-gradient(circle, color-mix(in srgb, var(--muted-foreground) 8%, transparent) 1px, transparent 1px)",
           backgroundSize: "24px 24px",
         }}
       >
@@ -785,71 +636,6 @@ export function FeedbackPageClient({
                 />
               ))
             )}
-          </div>
-        )}
-
-        {activeTab === "appointments" && (
-          <div className="bg-card border border-border rounded-2xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    {["Guest", "Date", "Time", "Covers", "Status", "Follow-up", "Actions"].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {MOCK_APPOINTMENTS.map((appt) => (
-                    <tr key={appt.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-medium text-foreground">{appt.guest}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{appt.date}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{appt.time}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{appt.covers}</td>
-                      <td className="px-4 py-3"><AppointmentStatusBadge status={appt.status} /></td>
-                      <td className="px-4 py-3">
-                        {appt.followUp === "thankyou_sent" && (
-                          <span className="text-[10px] font-medium text-teal-600">Thank you sent</span>
-                        )}
-                        {appt.followUp === "callback_needed" && (
-                          <span className="text-[10px] font-medium text-red-500">Callback needed</span>
-                        )}
-                        {appt.followUp === "resolved" && (
-                          <span className="text-[10px] font-medium text-muted-foreground">Resolved</span>
-                        )}
-                        {appt.followUp === "none" && (
-                          <span className="text-[10px] text-muted-foreground/50">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            title="Send Reminder"
-                            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                          >
-                            <Bell className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            title="Post-visit Follow-up"
-                            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                          >
-                            <MessageSquare className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            title="Send Confirmation"
-                            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                          >
-                            <Mail className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
           </div>
         )}
 
@@ -963,40 +749,14 @@ export function FeedbackPageClient({
               </div>
             </div>
 
-            {/* Auto-sent collapsible */}
-            <div className="bg-card border border-border rounded-2xl overflow-hidden">
-              <button
-                onClick={() => setAutoSentOpen((o) => !o)}
-                className="flex items-center justify-between w-full px-5 py-4 text-left hover:bg-muted/30 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <span className="text-sm font-semibold text-foreground">Sent automatically today</span>
-                  <span className="rounded-full bg-green-500/15 border border-green-500/30 px-2 py-0.5 text-[10px] font-bold text-green-600">
-                    {AUTO_SENT_ITEMS.length}
-                  </span>
-                </div>
-                <span className="text-xs text-muted-foreground">{autoSentOpen ? "Hide" : "Show"}</span>
-              </button>
-              {autoSentOpen && (
-                <div className="border-t border-border divide-y divide-border/50">
-                  {AUTO_SENT_ITEMS.map((item) => (
-                    <div key={item.id} className="flex items-start gap-3 px-5 py-3">
-                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-500" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-medium text-foreground">{item.guest}</span>
-                          <span className="rounded-full bg-muted border border-border px-2 py-0.5 text-[9px] text-muted-foreground capitalize">
-                            {item.type.replace(/_/g, " ")}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground">{item.time}</span>
-                        </div>
-                        <p className="mt-0.5 text-xs italic text-muted-foreground truncate">{item.preview}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <div className="rounded-2xl border border-border bg-card px-5 py-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span className="text-sm font-semibold text-foreground">Automation history</span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Sent follow-ups are reflected in persisted feedback rows and pending action status.
+              </p>
             </div>
           </div>
         )}

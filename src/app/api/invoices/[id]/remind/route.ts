@@ -1,43 +1,71 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getInvoice, recordReminderSent } from "@/lib/services/invoice.service"
+import { createServerSupabaseClient, DEMO_ORG_ID } from "@/lib/db/supabase-server"
 import { generateReminder } from "@/lib/ai/generate-reminder"
-import { GoogleGenerativeAI } from "@google/generative-ai"
-import type { Invoice } from "@/lib/types"
+import { recordInvoiceReminderSent } from "@/lib/services/invoices"
+import { isSupabaseConfigured } from "@/lib/env"
 
-// ─── Thank-you generator (Gemini with hardcoded fallback) ─────────────────────
-
-async function generateThankYou(
-  customerName: string,
-  total: number,
-  visitCount: number
-): Promise<{ subject: string; message: string }> {
-  const fallback = {
-    subject: `Thank you for dining with us, ${customerName}!`,
-    message: `Dear ${customerName}, thank you so much for dining at Ember Table and for settling your invoice. It was a genuine pleasure having you with us${visitCount >= 3 ? " — as always" : ""}. We look forward to welcoming you back soon!`,
+type ReminderBody = {
+  followUpType?: "overdue" | "paid"
+  invoiceFallback?: {
+    total?: number
+    amount?: number
+    due_at?: string
+    dueDate?: string
+    reminder_count?: number
+    reminderCount?: number
+    number?: string
+    customer?: { name?: string }
+    guest?: string
+    status?: string
   }
+}
 
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) return fallback
+type ReminderFacts = {
+  customerName: string
+  totalDue: number
+  dueAt: string
+  reminderCount: number
+  invoiceNumber: string
+  status: string
+  source: "db" | "fallback"
+}
 
-  try {
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
-    const result = await model.generateContent(
-      `You are the manager of Ember Table, an upscale neighbourhood restaurant in Minneapolis.
-Write a warm, personal thank-you email to a guest after they paid their invoice.
-Guest: ${customerName}
-Total paid: $${total.toFixed(2)}
-${visitCount >= 3 ? `Loyal regular — ${visitCount} visits total. Thank them warmly.` : visitCount === 1 ? "First visit — express genuine hope to see them again." : `Returning guest — ${visitCount} visits total.`}
+function fallbackToFacts(id: string, fallback: ReminderBody["invoiceFallback"]): ReminderFacts | null {
+  if (!fallback) return null
 
-Return ONLY valid JSON, no markdown:
-{"subject": "<email subject line>", "message": "<3-4 warm, personal sentences>"}`
-    )
-    const text = result.response.text().trim()
-    const cleaned = text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim()
-    const parsed = JSON.parse(cleaned)
-    return { subject: parsed.subject, message: parsed.message }
-  } catch {
-    return fallback
+  return {
+    customerName:   fallback.customer?.name ?? fallback.guest ?? "Guest",
+    totalDue:       Number(fallback.total ?? fallback.amount ?? 0),
+    dueAt:          fallback.due_at ?? fallback.dueDate ?? new Date().toISOString(),
+    reminderCount:  Number(fallback.reminder_count ?? fallback.reminderCount ?? 0),
+    invoiceNumber:  fallback.number ?? id,
+    status:         fallback.status ?? "pending",
+    source:         "fallback",
+  }
+}
+
+async function getLedgerInvoiceFacts(id: string): Promise<ReminderFacts | null> {
+  const client = createServerSupabaseClient()
+  const { data, error } = await client
+    .from("invoices")
+    .select("id, invoice_number, total_amount, due_at, reminder_count, status, customers ( full_name )")
+    .eq("id", id)
+    .eq("organization_id", DEMO_ORG_ID)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  if (!data) return null
+
+  const customer = Array.isArray(data.customers) ? data.customers[0] : data.customers
+
+  return {
+    customerName:  customer?.full_name ?? "Guest",
+    totalDue:      Number(data.total_amount ?? 0),
+    dueAt:         data.due_at as string,
+    reminderCount: Number(data.reminder_count ?? 0),
+    invoiceNumber: (data.invoice_number as string) ?? id,
+    status:        (data.status as string) ?? "pending",
+    source:        "db",
   }
 }
 
@@ -49,60 +77,52 @@ export async function POST(
 ) {
   const { id } = await params
 
-  // Parse optional body — frontend sends followUpType and invoiceFallback for mock data
-  let body: { followUpType?: string; invoiceFallback?: Record<string, unknown> } = {}
+  let body: ReminderBody = {}
   try {
     body = await req.json()
   } catch {
     // no body is fine
   }
 
-  // Try DB first; fall back to the client-provided invoice data for mock IDs
-  let invoice: Invoice
-  const dbResult = await getInvoice(id)
-  if (dbResult.error || !dbResult.data) {
-    if (body.invoiceFallback) {
-      invoice = body.invoiceFallback as unknown as Invoice
-    } else {
-      return NextResponse.json({ error: "Invoice not found." }, { status: 404 })
-    }
-  } else {
-    invoice = dbResult.data
+  const facts =
+    (isSupabaseConfigured() ? await getLedgerInvoiceFacts(id) : null) ??
+    fallbackToFacts(id, body.invoiceFallback)
+  if (!facts) {
+    return NextResponse.json({ error: "Invoice not found." }, { status: 404 })
   }
-
-  const customerName = invoice.customer?.name ?? "Guest"
-  const visitCount   = invoice.customer?.visit_count ?? 1
-  const total        = invoice.total ?? 0
 
   // ── Paid thank-you path ────────────────────────────────────────────────────
   if (body.followUpType === "paid") {
-    const { subject, message } = await generateThankYou(customerName, total, visitCount)
+    const thankYou = await generateReminder(facts, "paid")
     return NextResponse.json({
-      subject,
-      message,
+      subject:          thankYou.subject,
+      message:          thankYou.message,
       reminder_number: 0,
-      customer_name:   customerName,
-      invoice_total:   total,
+      customer_name:    facts.customerName,
+      invoice_total:    facts.totalDue,
+      follow_up_type:   "paid",
     })
   }
 
   // ── Payment reminder path (overdue / pending) ─────────────────────────────
 
   // Guard: don't send payment reminders on already-paid invoices
-  if (invoice.status === "paid") {
+  if (facts.status === "paid") {
     return NextResponse.json({ error: "Invoice already paid." }, { status: 400 })
   }
 
-  const reminder = await generateReminder(invoice)
-
-  // Best-effort DB update — silently skip for mock IDs that don't exist in Supabase
-  await recordReminderSent(id).catch(() => undefined)
+  const reminder = await generateReminder(facts)
+  const reminderNumber =
+    facts.source === "db"
+      ? await recordInvoiceReminderSent(createServerSupabaseClient(), id, DEMO_ORG_ID)
+      : reminder.reminder_number
 
   return NextResponse.json({
     subject:          reminder.subject,
     message:          reminder.message,
-    reminder_number:  reminder.reminder_number,
-    customer_name:    customerName,
-    invoice_total:    total,
+    reminder_number:  reminderNumber,
+    customer_name:    facts.customerName,
+    invoice_total:    facts.totalDue,
+    follow_up_type:   "overdue",
   })
 }

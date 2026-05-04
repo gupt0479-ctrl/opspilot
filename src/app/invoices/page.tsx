@@ -88,7 +88,7 @@ export default async function InvoicesPage() {
   const overdueTotal = overdue.reduce((s, i) => s + i.amount, 0)
 
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-7">
       <div>
         <h1 className="text-xl font-semibold text-foreground">Invoices</h1>
         <p className="text-xs text-muted-foreground">

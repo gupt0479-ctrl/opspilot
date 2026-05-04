@@ -1076,6 +1076,7 @@ export function InvoiceTable({ invoices: initial }: { invoices: Invoice[] }) {
   const [invoices, setInvoices] = useState(initial)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [loadingPay, setLoadingPay] = useState<string | null>(null)
+  const [loadingSend, setLoadingSend] = useState<string | null>(null)
   const [loadingRemind, setLoadingRemind] = useState<string | null>(null)
   const [loadingFollowUp, setLoadingFollowUp] = useState<string | null>(null)
   const [reminder, setReminder] = useState<ReminderResult | null>(null)
@@ -1097,6 +1098,19 @@ export function InvoiceTable({ invoices: initial }: { invoices: Invoice[] }) {
       }
     } finally {
       setLoadingPay(null)
+    }
+  }
+
+  async function sendInvoice(inv: Invoice, e: React.MouseEvent) {
+    e.stopPropagation()
+    setLoadingSend(inv.id)
+    try {
+      const res = await fetch(`/api/invoices/${inv.id}/send`, { method: "POST", body: "{}" })
+      if (res.ok) {
+        setInvoices((prev) => prev.map((i) => i.id === inv.id ? { ...i, status: "sent" } : i))
+      }
+    } finally {
+      setLoadingSend(null)
     }
   }
 
@@ -1152,7 +1166,7 @@ export function InvoiceTable({ invoices: initial }: { invoices: Invoice[] }) {
     }
   }
 
-  const actionable = (status: string) => status === "overdue" || status === "pending" || status === "sent"
+  const payable = (status: string) => status === "overdue" || status === "pending" || status === "sent"
 
   function nextInvoiceNumber() {
     const nums = invoices
@@ -1277,7 +1291,18 @@ export function InvoiceTable({ invoices: initial }: { invoices: Invoice[] }) {
                         </button>
                       )}
 
-                      {actionable(inv.status) && (
+                      {inv.status === "draft" && (
+                        <button
+                          onClick={(e) => sendInvoice(inv, e)}
+                          disabled={loadingSend === inv.id}
+                          className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 transition-colors hover:bg-blue-100 disabled:opacity-50"
+                        >
+                          {loadingSend === inv.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
+                          Send
+                        </button>
+                      )}
+
+                      {payable(inv.status) && (
                         <>
                           {/* Mark Paid */}
                           <button

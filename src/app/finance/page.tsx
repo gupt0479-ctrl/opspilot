@@ -308,7 +308,7 @@ export default async function FinancePage() {
 
   if (!isSupabaseConfigured()) {
     return (
-      <div className="p-6">
+      <div>
         <p className="text-sm text-muted-foreground">
           Finance data unavailable — Supabase is not configured.
         </p>
@@ -391,9 +391,9 @@ export default async function FinancePage() {
 
   return (
     <div
-      className="space-y-5 p-6 min-h-screen bg-background"
+      className="min-h-screen space-y-7 bg-background"
       style={{
-        backgroundImage: "radial-gradient(circle, hsl(var(--muted-foreground) / 0.08) 1px, transparent 1px)",
+        backgroundImage: "radial-gradient(circle, color-mix(in srgb, var(--muted-foreground) 8%, transparent) 1px, transparent 1px)",
         backgroundSize: "24px 24px",
       }}
     >

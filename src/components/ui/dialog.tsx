@@ -34,7 +34,7 @@ export function Dialog({ open, onClose, children }: DialogProps) {
     <dialog
       ref={ref}
       onCancel={onClose}
-      className="w-full max-w-md rounded-xl border bg-white p-0 shadow-xl backdrop:bg-black/40 open:animate-in open:fade-in open:zoom-in-95"
+      className="surface-card w-full max-w-md p-0 text-card-foreground backdrop:bg-black/50 open:animate-in open:fade-in open:zoom-in-95"
     >
       {children}
     </dialog>

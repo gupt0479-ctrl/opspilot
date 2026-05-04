@@ -240,7 +240,7 @@ export default function InventoryPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-7">
       <div>
         <h1 className="text-xl font-semibold text-foreground">Inventory</h1>
         <p className="text-xs text-muted-foreground">

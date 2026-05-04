@@ -20,9 +20,13 @@ function makeBuilder(result: QueryResult): unknown {
   const proxy: unknown = new Proxy(
     {},
     {
-      get: (_t, prop: string) => {
+      get: (target, prop: string) => {
+        void target
         if (prop === "maybeSingle" || prop === "single") return () => Promise.resolve(result)
-        return (..._: unknown[]) => proxy
+        return (...args: unknown[]) => {
+          void args
+          return proxy
+        }
       },
     }
   )
@@ -42,9 +46,16 @@ function makeClient(
       const handler = fromHandlers[table]
       if (!handler) throw new Error(`Unexpected .from("${table}") call in test`)
       return {
-        select: (..._: unknown[]) => handler("find"),
-        insert: (_data: unknown) => ({
-          select: (..._: unknown[]) => handler("insert"),
+        select: (...args: unknown[]) => {
+          void args
+          return handler("find")
+        },
+        insert: (data: unknown) => ({
+          select: (...args: unknown[]) => {
+            void data
+            void args
+            return handler("insert")
+          },
         }),
       }
     },
